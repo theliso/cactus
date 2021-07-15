@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import http from "http";
-import type { AddressInfo } from "net";
+import { AddressInfo } from "net";
 import { v4 as uuidv4 } from "uuid";
 import express from "express";
 import bodyParser from "body-parser";
@@ -8,7 +9,7 @@ import {
   IPluginHtlcEthBesuErc20Options,
   NewContractRequest,
   PluginFactoryHtlcEthBesuErc20,
-  WithdrawRequest,
+  RefundRequest,
   InitializeRequest,
   Configuration,
 } from "@hyperledger/cactus-plugin-htlc-eth-besu-erc20";
@@ -16,8 +17,8 @@ import {
   EthContractInvocationType,
   PluginFactoryLedgerConnector,
   PluginLedgerConnectorBesu,
-  Web3SigningCredentialType,
   Web3SigningCredential,
+  Web3SigningCredentialType,
 } from "@hyperledger/cactus-plugin-ledger-connector-besu";
 import {
   LogLevelDesc,
@@ -31,19 +32,14 @@ import {
   BESU_TEST_LEDGER_DEFAULT_OPTIONS,
   pruneDockerAllIfGithubAction,
 } from "@hyperledger/cactus-test-tooling";
+import { PluginKeychainMemory } from "@hyperledger/cactus-plugin-keychain-memory";
 import TestTokenJSON from "../../../solidity/token-erc20-contract/Test_Token.json";
 import DemoHelperJSON from "../../../solidity/token-erc20-contract/DemoHelpers.json";
 import HashTimeLockJSON from "../../../../../../cactus-plugin-htlc-eth-besu-erc20/src/main/solidity/contracts/HashedTimeLockContract.json";
 
-import { PluginKeychainMemory } from "@hyperledger/cactus-plugin-keychain-memory";
-
 const logLevel: LogLevelDesc = "INFO";
 const estimatedGas = 6721975;
-const expiration = 2147483648;
-const besuTestLedger = new BesuTestLedger({ logLevel });
-const secret =
-  "0x3853485acd2bfc3c632026ee365279743af107a30492e3ceaa7aefc30c2a048a";
-const receiver = "0x" + besuTestLedger.getGenesisAccountPubKey();
+const receiver = "0x627306090abaB3A6e1400e9345bC60c78a8BEf57";
 const hashLock =
   "0x3c335ba7f06a8b01d0596589f73c19069e21c81e5013b91f408165d1bf623d32";
 const firstHighNetWorthAccount = "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1";
@@ -55,11 +51,34 @@ const web3SigningCredential: Web3SigningCredential = {
   secret: privateKey,
   type: Web3SigningCredentialType.PrivateKeyHex,
 } as Web3SigningCredential;
+
+const timeout = (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+const testCase = "Test refund endpoint";
+
+test("BEFORE " + testCase, async () => {
+  const pruning = pruneDockerAllIfGithubAction({ logLevel });
+  await expect(pruning).resolves.toBeTruthy();
+});
 const besuTestLedger = new BesuTestLedger({
   logLevel,
   envVars: [...BESU_TEST_LEDGER_DEFAULT_OPTIONS.envVars, "BESU_LOGGING=ALL"],
 });
-const testCase = "Test withdraw endpoint";
+const expressApp = express();
+afterAll(async () => {
+  await besuTestLedger.stop();
+  await besuTestLedger.destroy();
+});
+const server = http.createServer(expressApp);
+afterAll(async () => await Servers.shutdown(server));
+const listenOptions: IListenOptions = {
+  hostname: "0.0.0.0",
+  port: 0,
+  server,
+};
+const keychainId = uuidv4();
 let addressInfo,
   address: string,
   port: number,
@@ -74,21 +93,9 @@ beforeAll(async () => {
   api = new BesuApi(configuration);
 });
 
-test("BEFORE " + testCase, async () => {
-  const pruning = pruneDockerAllIfGithubAction({ logLevel });
-  await expect(pruning).resolves.toBeTruthy();
-});
-
-afterAll(async () => {
-  await besuTestLedger.stop();
-  await besuTestLedger.destroy();
-});
-
-test(testCase, async () => {
-  await besuTestLedger.start();
+test("Test invalid refund with invalid time", async () => {
   const rpcApiHttpHost = await besuTestLedger.getRpcApiHttpHost();
   const rpcApiWsHost = await besuTestLedger.getRpcApiWsHost();
-  const keychainId = uuidv4();
   const keychainPlugin = new PluginKeychainMemory({
     instanceId: uuidv4(),
     keychainId,
@@ -129,11 +136,6 @@ test(testCase, async () => {
 
   const expressApp = express();
   expressApp.use(bodyParser.json({ limit: "250mb" }));
-  const server = http.createServer(expressApp);
-
-  const configuration = new Configuration({ basePath: apiHost });
-  const api = new BesuApi(configuration);
-
   await pluginHtlc.getOrCreateWebServices();
   await pluginHtlc.registerWebServices(expressApp);
 
@@ -145,10 +147,10 @@ test(testCase, async () => {
     gas: estimatedGas,
   };
   const deployOut = await pluginHtlc.initialize(initRequest);
+
   expect(deployOut).toBeTruthy();
   expect(deployOut.transactionReceipt).toBeTruthy();
   expect(deployOut.transactionReceipt.contractAddress).toBeTruthy();
-
   const hashTimeLockAddress = deployOut.transactionReceipt
     .contractAddress as string;
 
@@ -179,6 +181,7 @@ test(testCase, async () => {
   expect(deployOutDemo).toBeTruthy();
   expect(deployOutDemo.transactionReceipt).toBeTruthy();
   expect(deployOutDemo.transactionReceipt.contractAddress).toBeTruthy();
+
   const { success } = await connector.invokeContract({
     contractName: TestTokenJSON.contractName,
     keychainId,
@@ -190,7 +193,7 @@ test(testCase, async () => {
   });
   expect(success).toBeTruthy();
 
-  const { callOutput } = await connector.invokeContract({
+  const responseBalance = await connector.invokeContract({
     contractName: TestTokenJSON.contractName,
     keychainId,
     signingCredential: web3SigningCredential,
@@ -198,7 +201,20 @@ test(testCase, async () => {
     methodName: "balanceOf",
     params: [firstHighNetWorthAccount],
   });
-  expect(callOutput).toEqual("100");
+  expect(responseBalance.callOutput).toEqual("100");
+
+  const { callOutput } = await connector.invokeContract({
+    contractName: DemoHelperJSON.contractName,
+    keychainId,
+    signingCredential: web3SigningCredential,
+    invocationType: EthContractInvocationType.Call,
+    methodName: "getTimestamp",
+    params: [],
+  });
+  expect(callOutput).toBeTruthy();
+  let timestamp = 0;
+  timestamp = callOutput as number;
+  timestamp = +timestamp + +10;
 
   const responseAllowance = await connector.invokeContract({
     contractName: TestTokenJSON.contractName,
@@ -214,7 +230,7 @@ test(testCase, async () => {
     contractAddress: hashTimeLockAddress,
     inputAmount: 10,
     outputAmount: 1,
-    expiration,
+    expiration: timestamp,
     hashLock,
     tokenAddress,
     receiver,
@@ -225,7 +241,7 @@ test(testCase, async () => {
     web3SigningCredential,
     gas: estimatedGas,
   };
-  const res = await api.newContractV1(request);
+  const res = await api.newContract(request);
   expect(res.status).toEqual(200);
 
   const responseTxId = await connector.invokeContract({
@@ -239,31 +255,25 @@ test(testCase, async () => {
       receiver,
       10,
       hashLock,
-      expiration,
+      timestamp,
       tokenAddress,
     ],
   });
-  expect(responseTxId.callOutput).toBeTruthy;
+  expect(responseTxId.callOutput).toBeTruthy();
   const id = responseTxId.callOutput as string;
 
-  const withdrawRequest: WithdrawRequest = {
-    id,
-    secret,
-    web3SigningCredential,
-    connectorId,
-    keychainId,
-  };
-  const resWithdraw = await api.withdrawV1(withdrawRequest);
-  expect(resWithdraw.status).toEqual(200);
-
-  const resStatus = await api.getSingleStatusV1(
-    id,
-    web3SigningCredential,
-    connectorId,
-    keychainId,
-  );
-  expect(resStatus.status).toEqual(200);
-  expect(resStatus.data).toEqual(2);
+  try {
+    const refundRequest: RefundRequest = {
+      id,
+      web3SigningCredential,
+      connectorId,
+      keychainId,
+    };
+    const resRefund = await api.refund(refundRequest);
+    expect(resRefund.status).toEqual(400);
+  } catch (error) {
+    expect(error.response.status).toEqual(400);
+  }
 
   const responseFinalBalance = await connector.invokeContract({
     contractName: TestTokenJSON.contractName,
@@ -271,9 +281,9 @@ test(testCase, async () => {
     signingCredential: web3SigningCredential,
     invocationType: EthContractInvocationType.Call,
     methodName: "balanceOf",
-    params: [receiver],
+    params: [firstHighNetWorthAccount],
   });
-  expect(responseFinalBalance.callOutput).toEqual("10");
+  expect(responseFinalBalance.callOutput).toEqual("90");
 });
 
 test("BEFORE " + testCase, async () => {
