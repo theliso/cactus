@@ -80,13 +80,20 @@ const listenOptions: IListenOptions = {
   port: 0,
   server,
 };
+let addressInfo,
+  address: string,
+  port: number,
+  apiHost,
+  configuration,
+  api: BesuApi;
 beforeAll(async () => {
-  const addressInfo = (await Servers.listen(listenOptions)) as AddressInfo;
+  addressInfo = (await Servers.listen(listenOptions)) as AddressInfo;
+  ({ address, port } = addressInfo);
+  apiHost = `http://${address}:${port}`;
+  configuration = new Configuration({ basePath: apiHost });
+  api = new BesuApi(configuration);
 });
-const { address, port } = addressInfo;
-const apiHost = `http://${address}:${port}`;
-const configuration = new Configuration({ basePath: apiHost });
-const api = new BesuApi(configuration);
+
 test(testCase, async () => {
   await besuTestLedger.start();
   const rpcApiHttpHost = await besuTestLedger.getRpcApiHttpHost();
