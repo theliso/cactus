@@ -39,7 +39,10 @@ import HashTimeLockJSON from "../../../../../../cactus-plugin-htlc-eth-besu-erc2
 
 const logLevel: LogLevelDesc = "INFO";
 const estimatedGas = 6721975;
-const besuTestLedger = new BesuTestLedger({ logLevel });
+const besuTestLedger = new BesuTestLedger({
+  logLevel,
+  envVars: [...BESU_TEST_LEDGER_DEFAULT_OPTIONS.envVars, "BESU_LOGGING=ALL"],
+});
 const receiver = "0x" + besuTestLedger.getGenesisAccountPubKey();
 const hashLock =
   "0x3c335ba7f06a8b01d0596589f73c19069e21c81e5013b91f408165d1bf623d32";
@@ -63,11 +66,8 @@ test("BEFORE " + testCase, async () => {
   const pruning = pruneDockerAllIfGithubAction({ logLevel });
   await expect(pruning).resolves.toBeTruthy();
 });
-const besuTestLedger = new BesuTestLedger({
-  logLevel,
-  envVars: [...BESU_TEST_LEDGER_DEFAULT_OPTIONS.envVars, "BESU_LOGGING=ALL"],
-});
 const expressApp = express();
+expressApp.use(bodyParser.json({ limit: "250mb" }));
 afterAll(async () => {
   await besuTestLedger.stop();
   await besuTestLedger.destroy();
@@ -135,8 +135,6 @@ test(testCase, async () => {
   });
   const pluginHtlc = await factoryHTLC.create(pluginOptions);
   pluginRegistry.add(pluginHtlc);
-
-  expressApp.use(bodyParser.json({ limit: "250mb" }));
 
   await pluginHtlc.getOrCreateWebServices();
   await pluginHtlc.registerWebServices(expressApp);

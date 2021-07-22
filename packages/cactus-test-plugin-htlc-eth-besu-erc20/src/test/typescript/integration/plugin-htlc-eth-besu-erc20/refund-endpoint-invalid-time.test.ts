@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import http from "http";
 import { AddressInfo } from "net";
 import { v4 as uuidv4 } from "uuid";
@@ -37,7 +36,7 @@ import TestTokenJSON from "../../../solidity/token-erc20-contract/Test_Token.jso
 import DemoHelperJSON from "../../../solidity/token-erc20-contract/DemoHelpers.json";
 import HashTimeLockJSON from "../../../../../../cactus-plugin-htlc-eth-besu-erc20/src/main/solidity/contracts/HashedTimeLockContract.json";
 
-const logLevel: LogLevelDesc = "INFO";
+const logLevel: LogLevelDesc = "TRACE";
 const estimatedGas = 6721975;
 const receiver = "0x627306090abaB3A6e1400e9345bC60c78a8BEf57";
 const hashLock =
@@ -52,40 +51,42 @@ const web3SigningCredential: Web3SigningCredential = {
   type: Web3SigningCredentialType.PrivateKeyHex,
 } as Web3SigningCredential;
 
-const timeout = (ms: number) => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-};
-
 const testCase = "Test refund endpoint";
 
 test("BEFORE " + testCase, async () => {
   const pruning = pruneDockerAllIfGithubAction({ logLevel });
   await expect(pruning).resolves.toBeTruthy();
 });
+const keychainId = uuidv4();
+const expressApp = express();
+expressApp.use(bodyParser.json({ limit: "250mb" }));
 const besuTestLedger = new BesuTestLedger({
   logLevel,
   envVars: [...BESU_TEST_LEDGER_DEFAULT_OPTIONS.envVars, "BESU_LOGGING=ALL"],
 });
-const expressApp = express();
-afterAll(async () => {
-  await besuTestLedger.stop();
-  await besuTestLedger.destroy();
-});
 const server = http.createServer(expressApp);
-afterAll(async () => await Servers.shutdown(server));
-const listenOptions: IListenOptions = {
-  hostname: "0.0.0.0",
-  port: 0,
-  server,
-};
-const keychainId = uuidv4();
 let addressInfo,
   address: string,
   port: number,
   apiHost,
   configuration,
   api: BesuApi;
+
+afterAll(async () => {
+  await besuTestLedger.stop();
+  await besuTestLedger.destroy();
+});
+
+afterAll(async () => await Servers.shutdown(server));
+
 beforeAll(async () => {
+  await besuTestLedger.start();
+
+  const listenOptions: IListenOptions = {
+    hostname: "0.0.0.0",
+    port: 0,
+    server,
+  };
   addressInfo = (await Servers.listen(listenOptions)) as AddressInfo;
   ({ address, port } = addressInfo);
   apiHost = `http://${address}:${port}`;
@@ -134,9 +135,6 @@ test("Test invalid refund with invalid time", async () => {
   const pluginHtlc = await factoryHTLC.create(pluginOptions);
   pluginRegistry.add(pluginHtlc);
 
-  const expressApp = express();
-  expressApp.use(bodyParser.json({ limit: "250mb" }));
-  await pluginHtlc.getOrCreateWebServices();
   await pluginHtlc.registerWebServices(expressApp);
 
   const initRequest: InitializeRequest = {
@@ -241,7 +239,7 @@ test("Test invalid refund with invalid time", async () => {
     web3SigningCredential,
     gas: estimatedGas,
   };
-  const res = await api.newContract(request);
+  const res = await api.newContractV1(request);
   expect(res.status).toEqual(200);
 
   const responseTxId = await connector.invokeContract({
@@ -269,7 +267,7 @@ test("Test invalid refund with invalid time", async () => {
       connectorId,
       keychainId,
     };
-    const resRefund = await api.refund(refundRequest);
+    const resRefund = await api.refundV1(refundRequest);
     expect(resRefund.status).toEqual(400);
   } catch (error) {
     expect(error.response.status).toEqual(400);

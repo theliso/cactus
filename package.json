@@ -76,7 +76,6 @@
     "@commitlint/config-conventional": "8.0.0",
     "@openapitools/openapi-generator-cli": "2.3.3",
     "@types/fs-extra": "9.0.11",
-    "@types/jasminewd2": "2.0.10",
     "@types/jest": "26.0.23",
     "@types/node-fetch": "2.5.4",
     "@types/tape": "4.13.0",

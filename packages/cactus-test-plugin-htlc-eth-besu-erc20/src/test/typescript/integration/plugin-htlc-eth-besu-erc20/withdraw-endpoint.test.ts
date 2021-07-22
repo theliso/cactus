@@ -1,7 +1,8 @@
-import http from "http";
+import http, { Server } from "http";
 import type { AddressInfo } from "net";
 import { v4 as uuidv4 } from "uuid";
 import express from "express";
+import type { Express } from "express";
 import bodyParser from "body-parser";
 import {
   DefaultApi as BesuApi,
@@ -19,11 +20,8 @@ import {
   Web3SigningCredentialType,
   Web3SigningCredential,
 } from "@hyperledger/cactus-plugin-ledger-connector-besu";
-import {
-  LogLevelDesc,
-  IListenOptions,
-  Servers,
-} from "@hyperledger/cactus-common";
+import { LogLevelDesc, Servers } from "@hyperledger/cactus-common";
+import { IListenOptions } from "@hyperledger/cactus-common";
 import { PluginRegistry } from "@hyperledger/cactus-core";
 import { PluginImportType } from "@hyperledger/cactus-core-api";
 import {
@@ -40,7 +38,10 @@ import { PluginKeychainMemory } from "@hyperledger/cactus-plugin-keychain-memory
 const logLevel: LogLevelDesc = "INFO";
 const estimatedGas = 6721975;
 const expiration = 2147483648;
-const besuTestLedger = new BesuTestLedger({ logLevel });
+const besuTestLedger = new BesuTestLedger({
+  logLevel,
+  envVars: [...BESU_TEST_LEDGER_DEFAULT_OPTIONS.envVars, "BESU_LOGGING=ALL"],
+});
 const secret =
   "0x3853485acd2bfc3c632026ee365279743af107a30492e3ceaa7aefc30c2a048a";
 const receiver = "0x" + besuTestLedger.getGenesisAccountPubKey();
@@ -55,22 +56,28 @@ const web3SigningCredential: Web3SigningCredential = {
   secret: privateKey,
   type: Web3SigningCredentialType.PrivateKeyHex,
 } as Web3SigningCredential;
-const besuTestLedger = new BesuTestLedger({
-  logLevel,
-  envVars: [...BESU_TEST_LEDGER_DEFAULT_OPTIONS.envVars, "BESU_LOGGING=ALL"],
-});
+
 const testCase = "Test withdraw endpoint";
 let addressInfo,
   address: string,
   port: number,
-  apiHost,
-  configuration,
+  apiHost: string,
+  server: Server,
+  expressApp: Express,
   api: BesuApi;
 beforeAll(async () => {
+  expressApp = express();
+  expressApp.use(bodyParser.json({ limit: "250mb" }));
+  server = http.createServer(expressApp);
+  const listenOptions: IListenOptions = {
+    hostname: "0.0.0.0",
+    port: 0,
+    server,
+  };
   addressInfo = (await Servers.listen(listenOptions)) as AddressInfo;
   ({ address, port } = addressInfo);
   apiHost = `http://${address}:${port}`;
-  configuration = new Configuration({ basePath: apiHost });
+  const configuration = new Configuration({ basePath: apiHost });
   api = new BesuApi(configuration);
 });
 
@@ -127,14 +134,6 @@ test(testCase, async () => {
   const pluginHtlc = await factoryHTLC.create(pluginOptions);
   pluginRegistry.add(pluginHtlc);
 
-  const expressApp = express();
-  expressApp.use(bodyParser.json({ limit: "250mb" }));
-  const server = http.createServer(expressApp);
-
-  const configuration = new Configuration({ basePath: apiHost });
-  const api = new BesuApi(configuration);
-
-  await pluginHtlc.getOrCreateWebServices();
   await pluginHtlc.registerWebServices(expressApp);
 
   const initRequest: InitializeRequest = {

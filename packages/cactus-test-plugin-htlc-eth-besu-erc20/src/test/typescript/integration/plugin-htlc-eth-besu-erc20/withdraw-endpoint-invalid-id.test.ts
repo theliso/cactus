@@ -218,7 +218,7 @@ test("Test invalid withdraw with invalid id", async () => {
     web3SigningCredential,
     gas: estimatedGas,
   };
-  const res = await api.newContract(request);
+  const res = await api.newContractV1(request);
   expect(res.status).toEqual(200);
 
   try {
@@ -230,7 +230,7 @@ test("Test invalid withdraw with invalid id", async () => {
       connectorId,
       keychainId,
     };
-    const resWithdraw = await api.withdraw(withdrawRequest);
+    const resWithdraw = await api.withdrawV1(withdrawRequest);
     expect(resWithdraw.status).toEqual(400);
   } catch (error) {
     expect(error.response.status).toEqual(400);
