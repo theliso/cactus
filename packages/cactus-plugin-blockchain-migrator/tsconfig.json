@@ -7,13 +7,16 @@
         "moduleResolution": "node",
         "module": "commonjs",
         "declaration": true,
-        "sourceMap": true
+        "sourceMap": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true
     },
     "include": [
         "./src/**/*",
         "./test/**/*"
     ],
     "exclude": [
-        "./test/**/*.spec.ts"
+        "./test/**/*.spec.ts",
+        "./src/test/typescript/fixtures/*"
     ]
 }

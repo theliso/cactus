@@ -1,5 +1,5 @@
-import { IExpression } from "../common/interfaces/IExpression";
-import { IFactory } from "../common/interfaces/IFactory";
+import { IExpression } from "../interfaces/IExpression";
+import { IFactory } from "../interfaces/IFactory";
 
 export class TypescriptTestBesuFactory implements IFactory {
     

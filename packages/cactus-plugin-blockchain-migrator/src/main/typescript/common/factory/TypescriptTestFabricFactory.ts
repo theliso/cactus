@@ -1,18 +1,19 @@
-import { IExpression } from "../common/interfaces/IExpression";
-import { IFactory } from "../common/interfaces/IFactory";
-import { ArrayExpression } from "../model/test_model/typescript/fabric/ArrayExpression";
-import { ArrowFunctionExpression } from "../model/test_model/typescript/fabric/ArrowFunctionExpression";
-import { AwaitExpression } from "../model/test_model/typescript/fabric/AwaitExpression";
-import { BinaryExpression } from "../model/test_model/typescript/fabric/BinaryExpression";
-import { BlockStatement } from "../model/test_model/typescript/fabric/BlockStatement";
-import { CallExpression } from "../model/test_model/typescript/fabric/CallExpression";
-import { ExpressionStatement } from "../model/test_model/typescript/fabric/ExpressionStatement";
-import { Identifier } from "../model/test_model/typescript/fabric/Identifier";
-import { Literal } from "../model/test_model/typescript/fabric/Literal";
-import { MemberExpression } from "../model/test_model/typescript/fabric/MemberExpression";
-import { ThisExpression } from "../model/test_model/typescript/fabric/ThisExpression";
-import { VariableDeclaration } from "../model/test_model/typescript/fabric/VariableDeclaration";
-import { VariableDeclarator } from "../model/test_model/typescript/fabric/VariableDeclarator";
+/* eslint-disable prettier/prettier */
+import { IExpression } from "../interfaces/IExpression";
+import { IFactory } from "../interfaces/IFactory";
+import { ArrayExpression } from "../../model/test_model/typescript/fabric/ArrayExpression";
+import { ArrowFunctionExpression } from "../../model/test_model/typescript/fabric/ArrowFunctionExpression";
+import { AwaitExpression } from "../../model/test_model/typescript/fabric/AwaitExpression";
+import { BinaryExpression } from "../../model/test_model/typescript/fabric/BinaryExpression";
+import { BlockStatement } from "../../model/test_model/typescript/fabric/BlockStatement";
+import { CallExpression } from "../../model/test_model/typescript/fabric/CallExpression";
+import { ExpressionStatement } from "../../model/test_model/typescript/fabric/ExpressionStatement";
+import { Identifier } from "../../model/test_model/typescript/fabric/Identifier";
+import { Literal } from "../../model/test_model/typescript/fabric/Literal";
+import { MemberExpression } from "../../model/test_model/typescript/fabric/MemberExpression";
+import { ThisExpression } from "../../model/test_model/typescript/fabric/ThisExpression";
+import { VariableDeclaration } from "../../model/test_model/typescript/fabric/VariableDeclaration";
+import { VariableDeclarator } from "../../model/test_model/typescript/fabric/VariableDeclarator";
 
 export class TypescriptTestFabricFactory implements IFactory {
 
