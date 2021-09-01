@@ -4,7 +4,7 @@ import { TranslateStatements } from './TranslateStatements';
 import { EnumBuilder } from '../../model/src_model/typescript/EnumBuilder';
 import { StructBuilder } from '../../model/src_model/typescript/StructBuilder';
 import { UsingBuilder } from '../../model/src_model/typescript/UsingBuilder';
-import { Monitor } from '../../monitor/Monitor';
+import { Monitor } from '../../common/monitor/Monitor';
 
 declare global {
   interface String {

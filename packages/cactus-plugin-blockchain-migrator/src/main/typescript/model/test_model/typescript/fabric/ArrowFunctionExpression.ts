@@ -1,6 +1,6 @@
 import { IExpression } from "../../../../common/interfaces/IExpression";
 import { TypescriptTestCactus } from "../../../../ConstantCode/TypescriptTestCactus";
-import { Monitor } from "../../../../monitor/Monitor";
+import { Monitor } from "../../../../common/monitor/Monitor";
 
 
 export class ArrowFunctionExpression implements IExpression {

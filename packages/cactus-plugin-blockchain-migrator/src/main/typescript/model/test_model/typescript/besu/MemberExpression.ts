@@ -1,7 +1,7 @@
 import { IExpression } from "../../../../common/interfaces/IExpression";
-import { ChainCodeProgrammingLanguage } from "../../../../enums/ChainCodeProgrammingLanguage";
-import { FabricContractInvocationType } from "../../../../enums/FabricContractInvocationType";
-import { Monitor } from "../../../../monitor/Monitor";
+import { ChainCodeProgrammingLanguage } from "../../../../common/enums/ChainCodeProgrammingLanguage";
+import { FabricContractInvocationType } from "../../../../common/enums/FabricContractInvocationType";
+import { Monitor } from "../../../../common/monitor/Monitor";
 
 
 export class MemberExpression implements IExpression {

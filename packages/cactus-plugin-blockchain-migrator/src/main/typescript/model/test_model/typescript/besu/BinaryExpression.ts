@@ -1,6 +1,6 @@
 import { IExpression } from "../../../../common/interfaces/IExpression";
-import { OperatorEnum } from "../../../../enums/OperatorEnum";
-import { Monitor } from "../../../../monitor/Monitor";
+import { OperatorEnum } from "../../../../common/enums/OperatorEnum";
+import { Monitor } from "../../../../common/monitor/Monitor";
 
 export class BinaryExpression implements IExpression {
 

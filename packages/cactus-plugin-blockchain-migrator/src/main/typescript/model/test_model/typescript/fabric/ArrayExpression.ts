@@ -1,5 +1,5 @@
 import { IExpression } from "../../../../common/interfaces/IExpression";
-import { Monitor } from "../../../../monitor/Monitor";
+import { Monitor } from "../../../../common/monitor/Monitor";
 
 export class ArrayExpression implements IExpression {
     

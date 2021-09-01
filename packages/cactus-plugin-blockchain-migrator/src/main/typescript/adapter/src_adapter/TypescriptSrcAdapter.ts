@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import * as fs from 'fs';
 import { ITranslatorSourceService } from '../../common/interfaces/ITranslatorSourceService';
 import { Utils } from '../../utils/utils';
@@ -10,9 +11,8 @@ import { TranslatorSubParts } from '../../TranslatorCode/TranslatorSubParts/Tran
 import { TranslateExpression } from '../../TranslatorCode/TranslatorSubParts/TranslateExpression';
 import { ConstantCode } from '../../ConstantCode/Constants';
 import { UsingBuilder } from '../../model/src_model/typescript/UsingBuilder';
-import { Monitor } from '../../monitor/Monitor';
-
-
+import { Monitor } from '../../common/monitor/Monitor';
+import path = require('path');
 
 export class TypescriptSrcAdapter implements ITranslatorSourceService {
 
@@ -36,13 +36,16 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
     constructor(monitor: Monitor) {
         this._monitor = monitor;
     }
+    translate(ast: any, inputDirectory: string, mainContract?: string, config?: any, apiClient?: any): void {
+        throw new Error('Method not implemented.');
+    }
 
-    translate(ast: any, inputDirectory: string, mainContract?: string): void {
+    translateToFile(ast: any, inputDirectory: string, mainContract?: string): void {
         for (let i = 0; i < ast.children.length; i++) {
             if (ast.children[i].type == 'ImportDirective') {
-                let path = ast.children[i].path;
-                let ast1 = Utils.solFileToAST(inputDirectory.concat('/').concat(path));
-                this.translate(ast1, inputDirectory, mainContract);
+                const path = ast.children[i].path;
+                const ast1 = Utils.solFileToAST(inputDirectory.concat('/').concat(path));
+                this.translateToFile(ast1, inputDirectory, mainContract);
             }
         }
         for (let i = 0; i < ast.children.length; i++) {
@@ -53,9 +56,9 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
     }
 
     translateOneContractDefinition(contract: any, mainContract: string): void {
-        let extendsClassesName = [];
-        let otherClassesName = [];   //other classes name if use in contract for example using new or some other methods
-        let contractTypeDetail = {
+        const extendsClassesName = [];
+        const otherClassesName = [];   //other classes name if use in contract for example using new or some other methods
+        const contractTypeDetail = {
             isAbstractClass: false,
             isInterfaceClass: false,
             isLibrary: false
@@ -68,7 +71,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
             contractTypeDetail.isLibrary = true;
         }
         //assume all classes either extend or otherclasses must be declared above the current contract in the input file
-        let builder: ClassBuilder = this
+        const builder: ClassBuilder = this
             .translateContract(contract, contractTypeDetail, extendsClassesName, otherClassesName, mainContract);
         this._projectClasses.set(contract.name, builder);
 
@@ -79,13 +82,13 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
 
 
     translateContract(contract: any, contractTypeDetail: any, extendsClassesName: any, otherClassesName: any, mainContract: string): ClassBuilder {
-        let contractName = contract.name;
-        let isMainContract: boolean = mainContract === contractName;
-        let mixin: Array<Mixins> = new Array<Mixins>();
-        let classBuilder: ClassBuilder = new ClassBuilder();
-        let hasBaseClass: boolean = contract.baseContracts.length > 0;
+        const contractName = contract.name;
+        const isMainContract: boolean = mainContract === contractName;
+        const mixin: Array<Mixins> = new Array<Mixins>();
+        const classBuilder: ClassBuilder = new ClassBuilder();
+        const hasBaseClass: boolean = contract.baseContracts.length > 0;
 
-        let extendsClassesString = this.translatebaseClassesName(contract, isMainContract, mixin); //1
+        const extendsClassesString = this.translatebaseClassesName(contract, isMainContract, mixin); //1
         classBuilder.imports = classBuilder.imports.concat(this.translateStructDefinitions(contract.subNodes, contractName)); //2
         classBuilder.imports = classBuilder.imports.concat(this.translateEnumDefinitions(contract.subNodes, contractName));  //3
         this.translateEventDeclarations(contract.subNodes, contractName); //4
@@ -96,7 +99,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
         if (this._projectClasses.size > 0) {
             this._mixins.forEach(elem => {
                 if (this._projectClasses.has(elem.getContractName())) {
-                    let auxClass: ClassBuilder = this._projectClasses.get(elem.getContractName());
+                    const auxClass: ClassBuilder = this._projectClasses.get(elem.getContractName());
                     auxClass.fileName = elem.getContractName().concat('Mixin');
                     auxClass.signature = elem.composeMixinIntoString();
                     auxClass.concatAllFields();
@@ -155,7 +158,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
         if (contract.baseContracts.length != 0) {
             contract.baseContracts.forEach(elem => {
                 output = output.concat(elem.baseName.namePath.concat('Mixin('));
-                let mixinFunction: Mixins = new Mixins(elem.baseName.namePath);
+                const mixinFunction: Mixins = new Mixins(elem.baseName.namePath);
                 extendedClasses.push(mixinFunction);
                 this._mixins.push(mixinFunction);
             });
@@ -176,7 +179,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
         for (let i = 0; i < contractParts.length; i++) {
             if (contractParts[i].type == 'FunctionDefinition' && contractParts[i].name != contractName && contractParts[i].isConstructor == false
                 && contractParts[i].body != null) {
-                let isOverLoaded = BasicFunctions.getItemDetailWithContractName(contractParts[i].name, contractName, this.overloadedFunctionsList);
+                const isOverLoaded = BasicFunctions.getItemDetailWithContractName(contractParts[i].name, contractName, this.overloadedFunctionsList);
                 output += TranslatorSubParts
                     .translateOneFunction(
                         contractParts[i],
@@ -205,7 +208,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
         let imports = '';
         for (let i = 0; i < contractParts.length; i++) {
             if (contractParts[i].type == 'StructDefinition') {
-                let structBuilt: StructBuilder = TranslatorSubParts.translateOneStructDefinition(contractParts[i], contractName);
+                const structBuilt: StructBuilder = TranslatorSubParts.translateOneStructDefinition(contractParts[i], contractName);
                 this.structsList.push(structBuilt);
                 this.translatedCode.push({
                     Name: structBuilt.Name,
@@ -224,7 +227,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
         let imports: string = '';
         for (let i = 0; i < contractParts.length; i++) {
             if (contractParts[i].type == 'EnumDefinition') {
-                let enumBuilt: EnumBuilder = TranslatorSubParts.translateOneEnumDefinition(contractParts[i], contractName);
+                const enumBuilt: EnumBuilder = TranslatorSubParts.translateOneEnumDefinition(contractParts[i], contractName);
                 this.enumsList.push(enumBuilt);
                 this.translatedCode.push({
                     Name: enumBuilt.Name,
@@ -268,8 +271,8 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
     translateUsingForDeclarations(contractParts: any, contractName: string, otherClassesName: any): void {
         for (let i = 0; i < contractParts.length; i++) {
             if (contractParts[i].type == 'UsingForDeclaration') {
-                let type: string = TranslateExpression.translateFunctionOrVariableType(contractParts[i].typeName, false);
-                let usingBuilder: UsingBuilder = TranslatorSubParts.translateOneUsingForDeclaration(contractParts[i], contractName, this.functionsList);
+                const type: string = TranslateExpression.translateFunctionOrVariableType(contractParts[i].typeName, false);
+                const usingBuilder: UsingBuilder = TranslatorSubParts.translateOneUsingForDeclaration(contractParts[i], contractName, this.functionsList);
                 this.librariesList.push(usingBuilder);
                 otherClassesName.push(usingBuilder.Name);
                 if (contractParts[i].typeName.type === 'ElementaryTypeName') {
@@ -284,7 +287,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
 
     translateStateVariableDeclaration(contractParts: any, contractName: string, isMainContract: boolean): string {
         let output: string = '';
-        let gettersList = [];
+        const gettersList = [];
         for (let i = 0; i < contractParts.length; i++) {
             if (contractParts[i].type == 'StateVariableDeclaration') {
                 this.stateVariablesList.push(
@@ -327,7 +330,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
     }
 
     isAbstractContract(contractName: string): boolean {
-        let _functionsList = BasicFunctions.getListWithGivenContractName(contractName, this.functionsList);
+        const _functionsList = BasicFunctions.getListWithGivenContractName(contractName, this.functionsList);
         for (let i = 0; i < _functionsList.length; i++) {
             if (_functionsList[i].IsImplementationExist == false) {
                 return true;
@@ -347,19 +350,19 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
 
             if (contractParts[i].isConstructor == true || (contractParts[i].type == 'FunctionDefinition' && contractParts[i].name == contractName)) {
                 contractHaveConstructor = true;
-                let parametersList = [];
-                let returnParametersList = [];
-                let changedVariables = []; //for checking state variables changes
-                let localVariablesList = [];
-                let variableCounter = { count: 0 };
+                const parametersList = [];
+                const returnParametersList = [];
+                const changedVariables = []; //for checking state variables changes
+                const localVariablesList = [];
+                const variableCounter = { count: 0 };
 
                 output = output.concat('public async Constructor(ctx: Context');
-                let parameters: any[] = contractParts[i].parameters.parameters;
+                const parameters: any[] = contractParts[i].parameters.parameters;
                 for (let j = 0; j < parameters.length; ++j) {
                     if (j < parameters.length) {
                         output = output.concat(', ');
                     }
-                    let type: string = TranslateExpression.translateFunctionOrVariableType(parameters[j].name, true);
+                    const type: string = TranslateExpression.translateFunctionOrVariableType(parameters[j].name, true);
                     output = output.concat(`${parameters[j].name}: ${type}`);
 
                 }
@@ -440,15 +443,15 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
 
     translateOverloadedFunctions(contractName: string): string {
         let output: string = '';
-        let contractFunctionList = [];
+        const contractFunctionList = [];
         for (let i = 0; i < this.functionsList.length; i++) {
             if (this.functionsList[i].ContractName == contractName) {
                 contractFunctionList.push(this.functionsList[i]);
             }
         }
-        let overloadedFunctions = [];
+        const overloadedFunctions = [];
         for (let i = 0; i < contractFunctionList.length; i++) {
-            let functionName = contractFunctionList[i].Name;
+            const functionName = contractFunctionList[i].Name;
             for (let j = i + 1; j < contractFunctionList.length; j++) {
                 if (contractFunctionList[j].Name == functionName) {
                     if (!overloadedFunctions.includes(functionName)) {
@@ -458,8 +461,8 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
             }
         }
         for (let i = 0; i < overloadedFunctions.length; i++) {
-            let name = overloadedFunctions[i];
-            let list = [];
+            const name = overloadedFunctions[i];
+            const list = [];
             for (let j = 0; j < contractFunctionList.length; j++) {
                 if (name == contractFunctionList[j].Name) {
                     list.push(contractFunctionList[j].Parameters.length);
@@ -479,7 +482,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
 
     translateMappingUndefinedFunctions(contractName: string, otherClassesName: string[]): string {
         let output: string = '';
-        let contractMappingType = BasicFunctions.getListWithGivenContractName(contractName, this.mappingTypeList);
+        const contractMappingType = BasicFunctions.getListWithGivenContractName(contractName, this.mappingTypeList);
         for (let i = 0; i < contractMappingType.length; i++) {
             output += `async Mapping` + contractMappingType[i].Name + `(` + contractMappingType[i].Name + `,arg1`;
             let typeName = contractMappingType[i].ValueType;
@@ -498,9 +501,9 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
                 output += 'if(' + contractMappingType[i].Name + indexOutputString + ' == undefined) {\n';
                 output += contractMappingType[i].Name + indexOutputString + ' =';
                 if (typeName.type == 'UserDefinedTypeName' && !BasicFunctions.isItemExistInList(typeName.namePath, this.enumsList)) {
-                    let idx: number = typeName.namePath.indexOf('.');
-                    let namePath: string = idx !== -1 ? typeName.namePath.substring(idx + 1, typeName.namePath.length) : typeName.namePath;
-                    let structDetail = BasicFunctions.getItemDetail(namePath, this.structsList);
+                    const idx: number = typeName.namePath.indexOf('.');
+                    const namePath: string = idx !== -1 ? typeName.namePath.substring(idx + 1, typeName.namePath.length) : typeName.namePath;
+                    const structDetail = BasicFunctions.getItemDetail(namePath, this.structsList);
                     if (!otherClassesName.includes(structDetail.Name)) {
                         otherClassesName.push(structDetail.Name);
                     }
@@ -529,7 +532,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
     }
 
     extractClassDependencies(baseClasse?: any[], structEnum?: any): string {
-        let imports: string = '';
+        let imports: string = "";
         if (baseClasse !== null) {
             baseClasse.forEach(elem => {
                 imports = imports.concat(`import { ${elem.baseName.namePath}Mixin } from \'./${elem.baseName.namePath}Mixin\';\n`);
@@ -543,16 +546,16 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
     }
 
     write(outputDir: string, fileName: string): void {
-        let needUtilsOrBalance: boolean = this._monitor.needUtilsClass() || this._monitor.needBalanceClass();
-        let outputPath: string = outputDir.concat('/').concat(fileName);
+        const needUtilsOrBalance: boolean = this._monitor.needUtilsClass() || this._monitor.needBalanceClass();
+        const outputPath: string = path.join(outputDir, fileName);
         let imports: string = "";
         if (!fs.existsSync(outputPath)) {
             fs.mkdirSync(outputPath);
             fs.mkdirSync(outputPath.concat('/src'));
-            if (needUtilsOrBalance){
+            if (needUtilsOrBalance) {
                 fs.mkdirSync(outputPath.concat('/src/utils'));
             }
-            if (this._monitor.needUtilsClass()){
+            if (this._monitor.needUtilsClass()) {
                 fs.writeFileSync(
                     outputPath.concat('/src/utils/Utils.ts'),
                     ConstantCode.build()
@@ -560,7 +563,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
                 this._monitor.addSourceFile('Utils.ts', "./src/utils/");
                 imports += ConstantCode.utils;
             }
-            if (this._monitor.needBalanceClass()){
+            if (this._monitor.needBalanceClass()) {
                 fs.writeFileSync(
                     outputPath.concat('/src/utils/Balance.ts'),
                     ConstantCode.balanceClass()
@@ -570,9 +573,9 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
             }
         }
         for (let i = 0; i < this.translatedCode.length; i++) {
-            let contractDetail = this.translatedCode[i];
+            const contractDetail = this.translatedCode[i];
             let output: string = ConstantCode.header(fileName == contractDetail.Name).concat(imports);
-            let contractFileName: string = contractDetail.Name;
+            const contractFileName: string = contractDetail.Name;
             output = output.concat(contractDetail.Code);
             this._monitor.addSourceFile(`${contractFileName}.ts`, "./src/");
             fs.writeFileSync(
@@ -597,13 +600,13 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
             ConstantCode.tsConfigJson
         );
         this._monitor.addSourceFile(`tsconfig.json`, "./");
-        
+
         fs.writeFileSync(
             outputPath.concat('/tslint.json'),
             ConstantCode.tslintJson
         );
         this._monitor.addSourceFile(`tslint.json`, "./");
-        
+
         this._monitor.setUtils(false);
         this._monitor.setBalanceClass(false);
     }

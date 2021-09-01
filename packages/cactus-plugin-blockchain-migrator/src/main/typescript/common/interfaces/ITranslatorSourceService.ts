@@ -1,9 +1,8 @@
+/* eslint-disable prettier/prettier */
 import { ClassBuilder } from "../../model/src_model/typescript/ClassBuilder";
 import { ITranslatorService } from "./ITranslatorService";
 
 export interface ITranslatorSourceService extends ITranslatorService {
-
-    
     translateOneContractDefinition(contract: any, mainContract: string): void;
     translateContract(contract: any, contractTypeDetail: any, extendsClassesName: any, otherClassesName: any, mainContract: string): ClassBuilder;
     translatebaseClassesName(contract: any, isMainContract: boolean, extendedClasses: any): string;
@@ -20,6 +19,5 @@ export interface ITranslatorSourceService extends ITranslatorService {
     translateOverloadedFunctions(contractName: string): string;
     translateMappingUndefinedFunctions(contractName: string, otherClassesName: string[]): string;
     extractClassDependencies(baseClasse?: any[], structEnum?: any): string;
-    translateFunctions(contractParts: any, contractName: string, extendsClassesName: any, otherClassesName: any, isLibrary: boolean, isMainContract: boolean): string;
-    
+    translateFunctions(contractParts: any, contractName: string, extendsClassesName: any, otherClassesName: any, isLibrary: boolean, isMainContract: boolean): string;   
 }

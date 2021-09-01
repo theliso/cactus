@@ -1,77 +1,57 @@
-import { AddressInfo } from "net";
+/* eslint-disable prettier/prettier */
 import http from "http";
 import fs from "fs-extra";
-import path from "path";
-
+import { AddressInfo } from "net";
 import test, { Test } from "tape-promise/tape";
 import { v4 as uuidv4 } from "uuid";
-
-import express from "express";
 import bodyParser from "body-parser";
-
+import express from "express";
 import {
   Containers,
   FabricTestLedgerV1,
   pruneDockerAllIfGithubAction,
 } from "@hyperledger/cactus-test-tooling";
-
 import {
   Checks,
   IListenOptions,
   LogLevelDesc,
   Servers,
 } from "@hyperledger/cactus-common";
+import { PluginKeychainMemory } from "@hyperledger/cactus-plugin-keychain-memory";
 import { PluginRegistry } from "@hyperledger/cactus-core";
-
+import {
+  Configuration,
+} from "@hyperledger/cactus-core-api";
 import {
   ChainCodeProgrammingLanguage,
   DefaultEventHandlerStrategy,
   FabricContractInvocationType,
   FileBase64,
+  IPluginLedgerConnectorFabricOptions,
   PluginLedgerConnectorFabric,
-} from "../../../../../cactus-plugin-ledger-connector-fabric/src/main/typescript/public-api";
+  DefaultApi as FabricApi,
+} from "@hyperledger/cactus-plugin-ledger-connector-fabric";
 
-import { DefaultApi as FabricApi } from "../../../../../cactus-plugin-ledger-connector-fabric/src/main/typescript/public-api";
-
-import { IPluginLedgerConnectorFabricOptions } from "../../../../../cactus-plugin-ledger-connector-fabric/src/main/typescript/public-api";
-
+import { OspreyApplication } from "../../../main/typescript/OspreyApplication";
+import { OspreyConfiguration } from "../../../main/typescript/common/config/OspreyConfiguration";
+import path = require("path/posix");
 import { DiscoveryOptions } from "fabric-network";
-import { PluginKeychainMemory } from "@hyperledger/cactus-plugin-keychain-memory";
-import { Configuration } from "@hyperledger/cactus-core-api";
 
-import {
-  EthContractInvocationType,
-  Web3SigningCredentialType,
-  PluginLedgerConnectorBesu,
-  PluginFactoryLedgerConnector,
-  Web3SigningCredentialCactusKeychainRef,
-  ReceiptType,
-} from "../../../../../cactus-plugin-ledger-connector-besu/main/typescript/public-api";
-import { PluginKeychainMemory } from "@hyperledger/cactus-plugin-keychain-memory";
-import { BesuTestLedger } from "@hyperledger/cactus-test-tooling";
-import { LogLevelDesc } from "@hyperledger/cactus-common";
-import Web3 from "web3";
-import { PluginImportType } from "@hyperledger/cactus-core-api";
-
-const channelId = "mychannel";
-const channelName = channelId;
-
-const testCase = "deploys Fabric 2.x contract from typescript source";
 const logLevel: LogLevelDesc = "TRACE";
 
-test("BEFORE " + testCase, async (t: Test) => {
-  const pruning = pruneDockerAllIfGithubAction({ logLevel });
-  await t.doesNotReject(pruning, "Pruning didn't throw OK");
-  t.end();
-});
+
 
 test("Testing migration using fabric and besu connector", async (t: Test) => {
   // Fabric initialization
+  const pruning = pruneDockerAllIfGithubAction({ logLevel });
+  await t.doesNotReject(pruning, "Pruning didn't throw OK");
   test.onFailure(async () => {
     await Containers.logDiagnostics({ logLevel });
   });
-
-  const ledger = new FabricTestLedgerV1({
+  console.log("after prunning");
+  const channelId = "mychannel";
+  const channelName = channelId;
+  const fabricLedger = new FabricTestLedgerV1({
     emitContainerLogs: true,
     publishAllPorts: true,
     // imageName: "faio2x",
@@ -81,27 +61,27 @@ test("Testing migration using fabric and besu connector", async (t: Test) => {
     envVars: new Map([["FABRIC_VERSION", "2.2.0"]]),
     logLevel,
   });
+  console.log("Starting Fabric");
   const tearDown = async () => {
-    await ledger.stop();
-    await ledger.destroy();
+    await fabricLedger.stop();
+    await fabricLedger.destroy();
     await pruneDockerAllIfGithubAction({ logLevel });
   };
+
   test.onFinish(tearDown);
-  await ledger.start();
-
-  const connectionProfile = await ledger.getConnectionProfileOrg1();
+  console.log("After test tearDown is done!");
+  await fabricLedger.start();
+  console.log("After Starting Fabric");
+  const connectionProfile = await fabricLedger.getConnectionProfileOrg1();
   t.ok(connectionProfile, "getConnectionProfileOrg1() out truthy OK");
-
-  const enrollAdminOut = await ledger.enrollAdmin();
+  const enrollAdminOut = await fabricLedger.enrollAdmin();
   const adminWallet = enrollAdminOut[1];
-  const [userIdentity] = await ledger.enrollUser(adminWallet);
-  const sshConfig = await ledger.getSshConfig();
-
+  const [userIdentity] = await fabricLedger.enrollUser(adminWallet);
+  const sshConfig = await fabricLedger.getSshConfig();
   const keychainInstanceId = uuidv4();
   const keychainId = uuidv4();
   const keychainEntryKey = "user2";
   const keychainEntryValue = JSON.stringify(userIdentity);
-
   const keychainPlugin = new PluginKeychainMemory({
     instanceId: keychainInstanceId,
     keychainId,
@@ -118,7 +98,6 @@ test("Testing migration using fabric and besu connector", async (t: Test) => {
     enabled: true,
     asLocalhost: true,
   };
-
   // This is the directory structure of the Fabirc 2.x CLI container (fabric-tools image)
   // const orgCfgDir = "/fabric-samples/test-network/organizations/";
   const orgCfgDir =
@@ -179,7 +158,7 @@ test("Testing migration using fabric and besu connector", async (t: Test) => {
   const server = http.createServer(expressApp);
   const listenOptions: IListenOptions = {
     hostname: "localhost",
-    port: 0,
+    port: 9000,
     server,
   };
   const addressInfo = (await Servers.listen(listenOptions)) as AddressInfo;
@@ -189,71 +168,190 @@ test("Testing migration using fabric and besu connector", async (t: Test) => {
   await plugin.getOrCreateWebServices();
   await plugin.registerWebServices(expressApp);
   const apiUrl = `http://localhost:${port}`;
-
   const config = new Configuration({ basePath: apiUrl });
-
-  // Fabric connector entry-point to consume services (deployContract, ...)
+  console.info("Initializing Fabric api");
   const apiClient = new FabricApi(config);
 
   // Besu initialization
 
-  const logLevel: LogLevelDesc = "TRACE";
-  const besuTestLedger = new BesuTestLedger();
-  await besuTestLedger.start();
 
-  test.onFinish(async () => {
-    await besuTestLedger.stop();
-    await besuTestLedger.destroy();
-  });
-
-  const rpcApiHttpHost = await besuTestLedger.getRpcApiHttpHost();
-  const rpcApiWsHost = await besuTestLedger.getRpcApiWsHost();
-
-  /**
-   * Constant defining the standard 'dev' Besu genesis.json contents.
-   *
-   * @see https://github.com/hyperledger/besu/blob/1.5.1/config/src/main/resources/dev.json
-   */
-  const firstHighNetWorthAccount = besuTestLedger.getGenesisAccountPubKey();
-  const besuKeyPair = {
-    privateKey: besuTestLedger.getGenesisAccountPrivKey(),
-  };
-
-  const web3 = new Web3(rpcApiHttpHost);
-  const testEthAccount = web3.eth.accounts.create(uuidv4());
-
-  const keychainEntryKey = uuidv4();
-  const keychainEntryValue = testEthAccount.privateKey;
-  const keychainPlugin = new PluginKeychainMemory({
-    instanceId: uuidv4(),
-    keychainId: uuidv4(),
-    // pre-provision keychain with mock backend holding the private key of the
-    // test account that we'll reference while sending requests with the
-    // signing credential pointing to this keychain entry.
-    backend: new Map([[keychainEntryKey, keychainEntryValue]]),
-    logLevel,
-  });
-
-  const factory = new PluginFactoryLedgerConnector({
-    pluginImportType: PluginImportType.Local,
-  });
-
-  // Besu connector entry-point to consume services (invokeContract, ...)
-  const connector: PluginLedgerConnectorBesu = await factory.create({
-    rpcApiHttpHost,
-    rpcApiWsHost,
-    instanceId: uuidv4(),
-    pluginRegistry: new PluginRegistry(),
-  });
-
-  // 1 - Osprey initialization
-  // 2 - Read the solidity dataset and compile the smart contracts to a JSON file
+  // 1 - Osprey initialization - checked
+  // 2 - Read the solidity dataset and compile the smart contracts to a JSON file - 
   // 3 - assign the JSON file to the keychainPlugin, the  associate to the pluginRegistry of the
-  // connector (keychainPlugin.set(json.contractName, json.parse(jsonFile)))
-  // 4 - Call the Osprey translation function
-  // 5 - Call Osprey test translation
-  // 6 - Test the smart contracts and chaincode in its test ledgers
-  // 7 - Once the results are out, in case of OK deploy in Fabric
+  // connector (keychainPlugin.set(json.contractName, json.parse(jsonFile))) - 
+  // 4 - Call the Osprey translation function - checked
+  // 5 - Call Osprey test translation - 
+  // 6 - Test the smart contracts and chaincode in its test ledgers - 
+  // 7 - Once the results are out, in case of OK deploy in Fabric - 
+  console.info("Initialize Osprey");
+  const ospreyConfig: OspreyConfiguration = new OspreyConfiguration({
+    smartContractDir: "/media/luis/Disco\ rigido/Luis/university/Masters/second_year/thesis/smart_contract_migration/solidity_contracts/contracts/simple",
+    srcLang: "ts",
+    blockchain: "fabric",
+    srcFileName: "SimpleStorage.sol",
+    testDir: "/media/luis/Disco\ rigido/Luis/university/Masters/second_year/thesis/smart_contract_migration/solidity_contracts/test/simple",
+    testFileName: "simplestorage.js",
+    testLang: "js"
+  });
+  const ospreyClient: OspreyApplication = new OspreyApplication(ospreyConfig);
+  ospreyClient.translateSrcContractToFabric();
+  //ospreyClient.translateTest();
+  console.info("After translating Contract");
+  const contractName = "SimpleStorage";
+  const contractRelPath = "../../typescript/fixtures";
+  const contractDir = path.join(__dirname, contractRelPath, contractName);
+
+  // ├── package.json
+  // ├── src
+  // │   ├── assetTransfer.ts
+  // │   ├── asset.ts
+  // │   └── index.ts
+  // ├── tsconfig.json
+  // └── tslint.json
+  const sourceFiles: FileBase64[] = [];
+  {
+    const filename = "./SimpleStorage.ts";
+    const relativePath = "./src/";
+    const filePath = path.join(contractDir, relativePath, filename);
+    const buffer = await fs.readFile(filePath);
+    sourceFiles.push({
+      body: buffer.toString("base64"),
+      filepath: relativePath,
+      filename,
+    });
+  }
+  {
+    const filename = "./index.ts";
+    const relativePath = "./src/";
+    const filePath = path.join(contractDir, relativePath, filename);
+    const buffer = await fs.readFile(filePath);
+    sourceFiles.push({
+      body: buffer.toString("base64"),
+      filepath: relativePath,
+      filename,
+    });
+  }
+  {
+    const filename = "./package.json";
+    const relativePath = "./";
+    const filePath = path.join(contractDir, relativePath, filename);
+    const buffer = await fs.readFile(filePath);
+    sourceFiles.push({
+      body: buffer.toString("base64"),
+      filepath: relativePath,
+      filename,
+    });
+  }
+  {
+    const filename = "./tsconfig.json";
+    const relativePath = "./";
+    const filePath = path.join(contractDir, relativePath, filename);
+    const buffer = await fs.readFile(filePath);
+    sourceFiles.push({
+      body: buffer.toString("base64"),
+      filepath: relativePath,
+      filename,
+    });
+  }
+  {
+    const filename = "./tslint.json";
+    const relativePath = "./";
+    const filePath = path.join(contractDir, relativePath, filename);
+    const buffer = await fs.readFile(filePath);
+    sourceFiles.push({
+      body: buffer.toString("base64"),
+      filepath: relativePath,
+      filename,
+    });
+  }
+
+  test("...should store the value 89.", async (t1: Test) => {
+    const simpleStorageInstance = await apiClient.deployContractV1({
+      channelId,
+      ccVersion: "1.0.0",
+
+      sourceFiles,
+      ccName: contractName,
+      targetOrganizations: [org1Env, org2Env],
+      caFile: `${orgCfgDir}ordererOrganizations/example.com/orderers/orderer.example.com/msp/tlscacerts/tlsca.example.com-cert.pem`,
+      ccLabel: "SimpleStorage",
+      ccLang: ChainCodeProgrammingLanguage.Typescript,
+      ccSequence: 1,
+      orderer: "orderer.example.com:7050",
+      ordererTLSHostnameOverride: "orderer.example.com",
+      connTimeout: 60,
+    });
+    const { packageIds, lifecycle, success } = simpleStorageInstance.data;
+    t1.equal(simpleStorageInstance.status, 200, "simpleStorageInstance.status === 200 OK");
+    t1.true(success, "simpleStorageInstance.data.success === true");
+
+    const {
+      approveForMyOrgList,
+      installList,
+      queryInstalledList,
+      commit,
+      packaging,
+      queryCommitted,
+    } = lifecycle;
+
+    Checks.truthy(packageIds, `packageIds truthy OK`);
+    Checks.truthy(
+      Array.isArray(packageIds),
+      `Array.isArray(packageIds) truthy OK`,
+    );
+    Checks.truthy(approveForMyOrgList, `approveForMyOrgList truthy OK`);
+    Checks.truthy(
+      Array.isArray(approveForMyOrgList),
+      `Array.isArray(approveForMyOrgList) truthy OK`,
+    );
+    Checks.truthy(installList, `installList truthy OK`);
+    Checks.truthy(
+      Array.isArray(installList),
+      `Array.isArray(installList) truthy OK`,
+    );
+    Checks.truthy(queryInstalledList, `queryInstalledList truthy OK`);
+    Checks.truthy(
+      Array.isArray(queryInstalledList),
+      `Array.isArray(queryInstalledList) truthy OK`,
+    );
+    Checks.truthy(commit, `commit truthy OK`);
+    Checks.truthy(packaging, `packaging truthy OK`);
+    Checks.truthy(queryCommitted, `queryCommitted truthy OK`);
+    // FIXME - without this wait it randomly fails with an error claiming that
+    // the endorsement was impossible to be obtained. The fabric-samples script
+    // does the same thing, it just waits 10 seconds for good measure so there
+    // might not be a way for us to avoid doing this, but if there is a way we
+    // absolutely should not have timeouts like this, anywhere...
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+
+    await apiClient.runTransactionV1({
+      contractName,
+      channelName,
+      params: ["89"],
+      methodName: "set",
+      invocationType: FabricContractInvocationType.Send,
+      signingCredential: {
+        keychainId,
+        keychainRef: keychainEntryKey,
+      },
+    });
+    const storedData = await apiClient.runTransactionV1({
+      contractName,
+      channelName,
+      params: [""],
+      methodName: "get",
+      invocationType: FabricContractInvocationType.Call,
+      signingCredential: {
+        keychainId,
+        keychainRef: keychainEntryKey,
+      },
+    });
+    t1.equal(JSON.parse(storedData.data.functionOutput), 89, "The value 89 was stored.");
+
+
+    t1.end();
+  }
+  );
 
   // Dispose the test
   t.end();
