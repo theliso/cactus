@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { IExpression } from "../../../../common/interfaces/IExpression";
 import { TypescriptTestCactus } from "../../../../ConstantCode/TypescriptTestCactus";
 import { Monitor } from "../../../../common/monitor/Monitor";

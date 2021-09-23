@@ -47,6 +47,8 @@ export class OspreyApplication {
     fabricAdapter.translate(astJSON, relativePath, path.parse(fileName).name, config, apiClient);
   }
 
+  
+
   public translateTestAndWriteInFile(): void {
     throw new Error("Method not implemented.");
   }

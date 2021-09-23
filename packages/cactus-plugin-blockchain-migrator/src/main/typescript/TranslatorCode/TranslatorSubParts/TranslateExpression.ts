@@ -1,20 +1,20 @@
-import { EnumBuilder } from '../../model/src_model/typescript/EnumBuilder';
-import { BasicFunctions } from '../BasicFunctions/BasicFunctions';
+import { EnumBuilder } from "../../model/src_model/typescript/EnumBuilder";
+import { BasicFunctions } from "../BasicFunctions/BasicFunctions";
 
 export class TranslateExpression {
 
   static getVariableNameFromSingleExpression(expression) {
 
-    if (expression.type == 'Identifier') {
+    if (expression.type === "Identifier") {
       return expression.name;
     }
-    if (expression.type == 'IndexAccess') {
-      if (expression.base.type == 'IndexAccess') {
+    if (expression.type === "IndexAccess") {
+      if (expression.base.type === "IndexAccess") {
         return this.getVariableNameFromSingleExpression(expression.base);
       }
       return expression.base.name;
     }
-    if (expression.type == 'MemberAccess') {
+    if (expression.type === "MemberAccess") {
       return expression.memberName;
     }
   }
@@ -71,13 +71,9 @@ export class TranslateExpression {
         return 'ctx.stub.GetTxTimestamp()';
       }
       if (parametersList === undefined || parametersList.length === 0) {
-       /*  let stateVar: any = stateVariablesList.find(elem => elem.Name === _expression.name);
-        if(stateVar !== undefined) {
-          return `this.${stateVar.Name}()`;
-        } */
         return _expression.name;
       }
-      let name = parametersList.find(elem => elem.parameter === _expression.name);
+      const name = parametersList.find(elem => elem.parameter === _expression.name);
       if (name === undefined) {
         return _expression.name;
       }
@@ -110,7 +106,7 @@ export class TranslateExpression {
       else {
         let translatedType: string = this.translateType(_expression.expression, mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, parametersList) + '.' + _expression.memberName;
         if (translatedType === 'msg.sender') {
-          return 'ctx.clientIdentity.getID()';
+          return ' await ctx.clientIdentity.getID()';
         }
         if (translatedType === 'msg.value') {
           let value: any = parametersList.find(elem => elem.parameter === _expression.memberName);
@@ -148,7 +144,6 @@ export class TranslateExpression {
         else {
           output += 'throw new Error( "Condition Failed" );\n}';
         }
-
       }
       else if (_expression.expression.name == 'revert') {
         output += 'throw "Error";';
@@ -298,8 +293,8 @@ export class TranslateExpression {
         }
         else if (_expression.expression.memberName == 'send' || _expression.expression.memberName == 'transfer') {
 
-          let preFunction = this.translateType(_expression.expression.expression, mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, parametersList);
-
+          //let preFunction = this.translateType(_expression.expression.expression, mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, parametersList);
+          let preFunction: string = "await this.owner(ctx)";
           let functionParameters = [];
           for (let i = 0; i < _expression.arguments.length; i++) {
             functionParameters.push(this.translateExpression(_expression.arguments[i], mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList, interfaceContractVariableName));
@@ -325,7 +320,7 @@ export class TranslateExpression {
                   parameters += this.translateExpression(_expression.arguments[i], mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList, interfaceContractVariableName);
                 }
 
-                let functioncall = "await " + librarysList[i].Name + "." + _expression.expression.memberName + '(' + preFunction + parameters + ')';
+                let functioncall = librarysList[i].Name + "." + _expression.expression.memberName + '(' + preFunction + parameters + ')';
                 return functioncall;
               }
             }
@@ -338,7 +333,7 @@ export class TranslateExpression {
                 parameters += ", ";
               }
             }
-            let functioncall = "await " + variablename + "." + _expression.expression.memberName + '(' + parameters + ')';
+            let functioncall = variablename + "." + _expression.expression.memberName + '(' + parameters + ')';
             return functioncall;
           }
           else {
@@ -466,6 +461,7 @@ export class TranslateExpression {
       output = output.concat(')');
     }
     else {
+      // TODO: need to pass the information about the current class the expression is being translated
       output += this.translateType(_expression, mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, parametersList);
     }
     return output;
