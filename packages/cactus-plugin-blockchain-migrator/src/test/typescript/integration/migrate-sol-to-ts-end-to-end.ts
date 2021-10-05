@@ -173,7 +173,7 @@ test("Testing migration using fabric and besu connector", async (t: Test) => {
   const apiClient = new FabricApi(config);
 
   // Besu initialization
-
+  
 
   // 1 - Osprey initialization - checked
   // 2 - Read the solidity dataset and compile the smart contracts to a JSON file - 

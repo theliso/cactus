@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import { TranslateExpression } from './TranslateExpression';
 import { BasicFunctions } from '../BasicFunctions/BasicFunctions';
 import { TranslateStatements } from './TranslateStatements';
@@ -13,7 +14,7 @@ declare global {
 }
 
 String.prototype.replaceAll = function (search, replacement) { // For Replace All
-  let target: string = this;
+  const target: string = this;
   return target.replace(new RegExp(search, 'g'), replacement);
 };
 
@@ -21,10 +22,10 @@ export class TranslatorSubParts {
 
   static translateParameters(functionParameters, stateMutability?: string) {
 
-    let parameters = [];
+    const parameters = [];
     for (let i = 0; i < functionParameters.length; i++) {
-      let typeName = functionParameters[i].typeName;
-      let variablename: string = functionParameters[i].name;
+      const typeName = functionParameters[i].typeName;
+      const variablename: string = functionParameters[i].name;
       parameters.push({ Name: variablename, TypeName: typeName });
     }
     if (stateMutability !== undefined && stateMutability === 'payable') {
@@ -37,7 +38,7 @@ export class TranslatorSubParts {
     let output: string = '';
     for (let i = 0; i < localVariablesList.length; i++) {
       if (localVariablesList[i].Type == 'storage') {
-        let x: string = localVariablesList[i].InitValue.split('[')[0];
+        const x: string = localVariablesList[i].InitValue.split('[')[0];
         if (!changedVariables.includes(localVariablesList[i].InitValue.split('[')[0])) {
           changedVariables.push(localVariablesList[i].InitValue.split('[')[0]);
         }
@@ -45,7 +46,7 @@ export class TranslatorSubParts {
       `;
       }
     }
-    return output;
+    return output === ';' ? '' : output;
   }
 
   static putChangesInOneStateVariable(contractName, variableDetail, changedVariable, variableCounter, enumsList): string {
@@ -65,13 +66,13 @@ export class TranslatorSubParts {
 
     for (let i = 0; i < changedVariables.length; i++) {
       if (BasicFunctions.isItemExistInListWithContractName(changedVariables[i], contractName, stateVariablesList)) {  //for derived class variables
-        let variableDetail = BasicFunctions.getItemDetailWithContractName(changedVariables[i], contractName, stateVariablesList);
+        const variableDetail = BasicFunctions.getItemDetailWithContractName(changedVariables[i], contractName, stateVariablesList);
         output += this.putChangesInOneStateVariable(contractName, variableDetail, changedVariables[i], variableCounter, enumsList);
       }
       else {
         for (let j = 0; j < extendsClassesName.length; j++) {
           if (BasicFunctions.isItemExistInListWithContractName(changedVariables[i], extendsClassesName[j], stateVariablesList)) {  //for base class variables
-            let variableDetail = BasicFunctions.getItemDetailWithContractName(changedVariables[i], extendsClassesName[j], stateVariablesList);
+            const variableDetail = BasicFunctions.getItemDetailWithContractName(changedVariables[i], extendsClassesName[j], stateVariablesList);
             output += this.putChangesInOneStateVariable(extendsClassesName[j], variableDetail, changedVariables[i], variableCounter, enumsList);
           }
         }
@@ -85,7 +86,7 @@ export class TranslatorSubParts {
 
     for (let i = 0; i < parameters.length; i++) {
       let variableName = '';
-      let typeName = parameters[i].typeName;
+      const typeName = parameters[i].typeName;
       if (parameters[i].name != null) {
         variableName = parameters[i].name;
         output += `let ` + variableName + ` = ` + BasicFunctions.defaultValue(typeName) + `;\n`;
@@ -112,14 +113,14 @@ export class TranslatorSubParts {
       let ` + variableDetail.Name + ` = temp` + variableCounter.count++ + `.toString();\n`;
     }
     else if (variableDetail.TypeName.type == 'UserDefinedTypeName') {
-      let name: string = variableDetail.Name;
-      let type: string = TranslateExpression.translateFunctionOrVariableType(variableDetail.TypeName, false);
+      const name: string = variableDetail.Name;
+      const type: string = TranslateExpression.translateFunctionOrVariableType(variableDetail.TypeName, false);
       output += `let temp${variableCounter.count} = await ctx.stub.getState('${name}');
       let ${name}: ${type} = (${type}) [temp${variableCounter.count++}.toString()];\n`;
     }
     else if (variableDetail.TypeName.type == 'Mapping' || variableDetail.TypeName.type == 'ArrayTypeName') {
-      let type: string = TranslateExpression.translateFunctionOrVariableType(variableDetail.TypeName, false);
-      let fieldType: string = type === '' ? '' : `: ${type}`;
+      const type: string = TranslateExpression.translateFunctionOrVariableType(variableDetail.TypeName, false);
+      const fieldType: string = type === '' ? '' : `: ${type}`;
       output = output
         .concat(`let ${variableDetail.Name}${fieldType} = JSON.parse(( await ctx.stub.getState('${variableDetail.Name}')).toString(), Utils.reviver);\n`);
     }
@@ -129,16 +130,16 @@ export class TranslatorSubParts {
   static getStateVariables(contractName, extendsClassesName, variableCounter, stateVariablesList): string {
     let output: string = '';
 
-    let derivedClassStateVariableList = BasicFunctions.getListWithGivenContractName(contractName, stateVariablesList);
+    const derivedClassStateVariableList = BasicFunctions.getListWithGivenContractName(contractName, stateVariablesList);
 
     for (let i = 0; i < derivedClassStateVariableList.length; i++) { // for derived class
       output += this.getStateOneVariable(derivedClassStateVariableList[i], variableCounter);
     }
 
     for (let i = 0; i < extendsClassesName.length; i++) { // for base classes
-      let basedClassStateVariableList = BasicFunctions.getListWithGivenContractName(extendsClassesName[i], stateVariablesList);
+      const basedClassStateVariableList = BasicFunctions.getListWithGivenContractName(extendsClassesName[i], stateVariablesList);
       for (let j = 0; j < basedClassStateVariableList.length; j++) {
-        output += this.getStateOneVariable(basedClassStateVariableList[j], variableCounter)
+        output += this.getStateOneVariable(basedClassStateVariableList[j], variableCounter);
       }
     }
     return output;
@@ -153,7 +154,7 @@ export class TranslatorSubParts {
         output += `return ` + returnParametersList[0].Name + `;\n`;
       }
       else {
-        output = output.concat(`return ${returnParametersList[0].Name};`)
+        output = output.concat(`return ${returnParametersList[0].Name};`);
       }
     }
     return output;
@@ -166,9 +167,9 @@ export class TranslatorSubParts {
     for (let i = 0; i < functionModifiers.length; i++) {
 
       if (BasicFunctions.isItemExistInList(functionModifiers[i].name, modifiersList)) {
-        let modifierDetail = BasicFunctions.getItemDetail(functionModifiers[i].name, modifiersList)
+        const modifierDetail = BasicFunctions.getItemDetail(functionModifiers[i].name, modifiersList);
 
-        let localVariablesList = [];
+        const localVariablesList = [];
         localVariablesList.push({ Scope: 0, ListofVariables: [] });
 
         if (isBefore == true) {
@@ -187,9 +188,9 @@ export class TranslatorSubParts {
         for (let k = 0; k < functionModifiers[i].arguments.length; k++) {
           if (functionModifiers[i].arguments[k].type == 'BinaryOperation') {
 
-            let mappingVariablesList = [];
-            let functionCallsList = [];
-            let expressionStatement = TranslateExpression
+            const mappingVariablesList = [];
+            const functionCallsList = [];
+            const expressionStatement = TranslateExpression
               .translateExpression(
                 functionModifiers[i].arguments[k],
                 mappingVariablesList,
@@ -210,9 +211,9 @@ export class TranslatorSubParts {
           }
           else if (functionModifiers[i].arguments[k].type == 'MemberAccess'
             && BasicFunctions.isItemExistInList(functionModifiers[i].arguments[k].expression.name, enumsList)) {
-            let EnumType = functionModifiers[i].arguments[k].expression.name;
-            let enumDetail = BasicFunctions.getItemDetail(EnumType, enumsList);
-            let EnumValue = enumDetail.Index;
+            const EnumType = functionModifiers[i].arguments[k].expression.name;
+            const enumDetail = BasicFunctions.getItemDetail(EnumType, enumsList);
+            const EnumValue = enumDetail.Index;
             oneModifier = oneModifier.replaceAll(modifierDetail.Parameters[k].Name, ' ' + EnumValue + ' ');
           }
         }
@@ -222,20 +223,20 @@ export class TranslatorSubParts {
   }
 
   static translateOneStructDefinition(structDefinition, contractName): StructBuilder {
-    let structBuilder: StructBuilder = new StructBuilder();
+    const structBuilder: StructBuilder = new StructBuilder();
     structBuilder.build(structDefinition, contractName);
     return structBuilder;
   }
 
   static translateOneEnumDefinition(enumDefinition, contractName): EnumBuilder {
-    let enumBuilder: EnumBuilder = new EnumBuilder();
+    const enumBuilder: EnumBuilder = new EnumBuilder();
     enumBuilder.build(enumDefinition, contractName);
-    return enumBuilder
+    return enumBuilder;
   }
 
   static translateOneUsingForDeclaration(usingForStatement, contractName, functionList: any[]): UsingBuilder {
-    let type: string = TranslateExpression.translateFunctionOrVariableType(usingForStatement.typeName, false);
-    let usingBuilder: UsingBuilder = new UsingBuilder(
+    const type: string = TranslateExpression.translateFunctionOrVariableType(usingForStatement.typeName, false);
+    const usingBuilder: UsingBuilder = new UsingBuilder(
       type,
       functionList.filter(elem => elem.ContractName === usingForStatement.libraryName),
       contractName,
@@ -248,20 +249,20 @@ export class TranslatorSubParts {
 
   static translateOneEventDefinition(eventDefinition, contractName) {
 
-    let name = eventDefinition.name;
-    let parameters = this.translateParameters(eventDefinition.parameters.parameters);
-    let event = { Name: name, Parameters: parameters, ContractName: contractName }
+    const name = eventDefinition.name;
+    const parameters = this.translateParameters(eventDefinition.parameters.parameters);
+    const event = { Name: name, Parameters: parameters, ContractName: contractName };
     return event;
   }
 
   static translateOneModifier(modifier, contractName) { // only handle Expression Satement (not handled if,while,for)
 
-    let beforeStatements = [];
-    let afterStatements = [];
-    let name = modifier.name;
-    let parameters = this.translateParameters(modifier.parameters.parameters);
+    const beforeStatements = [];
+    const afterStatements = [];
+    const name = modifier.name;
+    const parameters = this.translateParameters(modifier.parameters.parameters);
 
-    let body = modifier.body;
+    const body = modifier.body;
     let j = 0;
     for (j = 0; j < body.statements.length; j++) {
       if (body.statements[j].expression.type == 'Identifier' && body.statements[j].expression.name == '_') break;
@@ -271,7 +272,7 @@ export class TranslatorSubParts {
       afterStatements.push(body.statements[j]);
     }
 
-    let _modifier = {
+    const _modifier = {
       Name: name,
       Parameters: parameters,
       BeforeStatements: beforeStatements,
@@ -316,7 +317,7 @@ export class TranslatorSubParts {
       returnParameters = this.translateParameters(functionDefinition.returnParameters.parameters);
     }
 
-    let functionDetail = {
+    const functionDetail = {
       Name: name,
       Parameters: parameters,
       ReturnParameters: returnParameters,
@@ -326,22 +327,22 @@ export class TranslatorSubParts {
       IsConstructor: isConstructor,
       IsImplementationExist: isImplementationExist,
       ContractName: contractName
-    }
+    };
     return functionDetail;
 
   }
 
   static translateOneStateVariableDeclaration(stateVariableDeclaration, contractName, gettersList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList) {
 
-    let variables = stateVariableDeclaration.variables;
+    const variables = stateVariableDeclaration.variables;
     for (let i = 0; i < variables.length; i++) {
 
       if (variables[i].visibility == 'public') {
         gettersList.push({ Name: variables[i].name, contract: contractName, Call: `this.${variables[i].name}()` });
       }
 
-      let variableName = variables[i].name;
-      let typeName = variables[i].typeName;
+      const variableName = variables[i].name;
+      const typeName = variables[i].typeName;
       if (typeName.type == 'Mapping') {
         mappingTypeList.push({ Name: variableName, KeyType: typeName.keyType, ValueType: typeName.valueType, ContractName: contractName });
       }
@@ -365,7 +366,7 @@ export class TranslatorSubParts {
             []
           );
       }
-      let stateVariable = {
+      const stateVariable = {
         Name: variableName,
         TypeName: typeName,
         InitialValue: initialValue,
@@ -377,9 +378,9 @@ export class TranslatorSubParts {
 
   static translateOneGetter(contractName, variableName, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList): string {
     let output: string = '';
-    let variableDetail = BasicFunctions.getItemDetailWithContractName(variableName.Name, contractName, stateVariablesList);
+    const variableDetail = BasicFunctions.getItemDetailWithContractName(variableName.Name, contractName, stateVariablesList);
 
-    let type: string = TranslateExpression.translateFunctionOrVariableType(variableDetail.TypeName, false);
+    const type: string = TranslateExpression.translateFunctionOrVariableType(variableDetail.TypeName, false);
     output += `public async ${variableName.Name}(ctx: Context): Promise<${type}> { \n`;
 
 
@@ -461,14 +462,14 @@ export class TranslatorSubParts {
   static byDefaultSetStateVariables(contractName, extendsClassesName, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, monitor: Monitor): string {
     let output: string = '';
 
-    let derivedClassStateVariableList = BasicFunctions.getListWithGivenContractName(contractName, stateVariablesList);
+    const derivedClassStateVariableList = BasicFunctions.getListWithGivenContractName(contractName, stateVariablesList);
 
     for (let i = 0; i < derivedClassStateVariableList.length; i++) { // for derived class
       output += this.ByDefaultSetStateOneVariable(derivedClassStateVariableList[i], contractName, enumsList, monitor);
     }
 
     for (let i = 0; i < extendsClassesName.length; i++) { // for base classes
-      let basedClassStateVariableList = BasicFunctions.getListWithGivenContractName(extendsClassesName[i], stateVariablesList);
+      const basedClassStateVariableList = BasicFunctions.getListWithGivenContractName(extendsClassesName[i], stateVariablesList);
       for (let j = 0; j < basedClassStateVariableList.length; j++) {
         output += this.ByDefaultSetStateOneVariable(basedClassStateVariableList[j], extendsClassesName[i], enumsList, monitor);
       }
@@ -476,17 +477,11 @@ export class TranslatorSubParts {
     return output;
   }
 
-  static translateFunctionParameters(parameters, parametersList, stateMutability: string): string {
+  static translateFunctionParameters(parameters, parametersList, stateMutability: string, monitor: Monitor): string {
     let output: string = '';
 
-    /* let output: string = `\nif (args.length != ` + (parameters.length + 1) + ` ){
-            throw new Error('Incorrect number of arguments. Expecting `+ (parameters.length + 1) + `');
-          }\n
-          let now = await ConstantClass.getNowValue(); 
-          let block = { timestamp:now }; //block.timestamp is alias for now 
-          let msg = { value:parseFloat(args[0]) , sender:await ConstantClass.getSenderAddress(stub)};
-          let _this = await stub.getState('This');  // contract address\n`; */
     if (stateMutability === 'payable') {
+      monitor.setBalanceClass(true);
       parameters.push({
         name: 'value',
         typeName: {
@@ -496,8 +491,8 @@ export class TranslatorSubParts {
       });
     }
     for (let i = 0; i < parameters.length; i++) {
-      let variableName = parameters[i].name;
-      let typeName = parameters[i].typeName;
+      const variableName = parameters[i].name;
+      const typeName = parameters[i].typeName;
       if (typeName.type == 'ElementaryTypeName') {
         if (typeName.name.replace(/\'/g, '').split(/(\d+)/)[0] == 'int' || typeName.name.replace(/\'/g, '').split(/(\d+)/)[0] == 'uint') {
           output = output.concat(`\nlet ${variableName}${i} : number = parseFloat(${variableName});\n`);
@@ -517,46 +512,46 @@ export class TranslatorSubParts {
     return output;
   }
 
-  static translateOneStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, hasTranslatedReturn: boolean[], isLibrary?): string {
-    let output: string = '';
+  static translateOneStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, hasTranslatedReturn: boolean[], monitor: Monitor, isLibrary?): string {
+    const output: string = '';
     if (statement.type == 'ExpressionStatement') {
-      return TranslateStatements.translateExpressionStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName);
+      return TranslateStatements.translateExpressionStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, monitor);
     }
     if (statement.type == 'ReturnStatement') {
       hasTranslatedReturn[0] = true;
-      return TranslateStatements.translateReturnStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary);
+      return TranslateStatements.translateReturnStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary, monitor);
     }
     if (statement.type == 'IfStatement') {
-      return TranslateStatements.translateIfStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, hasTranslatedReturn);
+      return TranslateStatements.translateIfStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, hasTranslatedReturn, monitor);
     }
     if (statement.type == 'ForStatement') {
-      return TranslateStatements.translateForStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary, hasTranslatedReturn);
+      return TranslateStatements.translateForStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary, hasTranslatedReturn, monitor);
     }
     if (statement.type == 'WhileStatement') {
-      return TranslateStatements.translateWhileStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary);
+      return TranslateStatements.translateWhileStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary, monitor);
     }
     if (statement.type == 'VariableDeclarationStatement') {
-      return TranslateStatements.translateVariableDeclarationStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName);
+      return TranslateStatements.translateVariableDeclarationStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, monitor);
     }
     if (statement.type == 'EmitStatement') {
-      return TranslateStatements.translateEmitStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName);
+      return TranslateStatements.translateEmitStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, monitor);
     }
     if (statement.type == 'Block') {
       return this.translateBody(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, hasTranslatedReturn, interfaceContractVariableName, isLibrary);
     }
     if (statement.type == 'ContinueStatement') {
-      return `continue;`
+      return `continue;`;
     }
     if (statement.type == 'BreakStatement') {
-      return `break;`
+      return `break;`;
     }
     if (statement.type == 'ThrowStatement') {
-      return `throw 'Error';`
+      return `throw 'Error';`;
     }
     return output;
   }
 
-  static translateBody(body, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, hasTranslatedReturn: boolean[], interfaceContractVariableName?, isLibrary?): string {
+  static translateBody(body, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, hasTranslatedReturn: boolean[], monitor: Monitor, interfaceContractVariableName?, isLibrary?): string {
 
     localVariablesList.push({ Scope: localVariablesList.length, ListofVariables: [] });
     let output: string = '';
@@ -582,13 +577,14 @@ export class TranslatorSubParts {
         librarysList,
         interfaceContractVariableName,
         hasTranslatedReturn,
+        monitor,
         isLibrary
       );
       output += '\n';
     }
     if (!hasTranslatedReturn[0]) {
       output += this.putChangesInStateVariables(contractName, changedVariables, extendsClassesName, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList);
-      let changedVariableSize: number = changedVariables.length;
+      const changedVariableSize: number = changedVariables.length;
       output += this.translateStorageVariables(localVariablesList.pop().ListofVariables, changedVariables); //2.h
       if (changedVariableSize !== changedVariables.length) {
         changedVariables = changedVariables.slice(changedVariableSize);
@@ -598,16 +594,16 @@ export class TranslatorSubParts {
     return output;
   }
 
-  static translateOneFunction(functionDetail, contractName, extendsClassesName, otherClassesName, isLibrary, contractsTranslatedCode, isOverloaded, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, isMainContract: boolean): string {
+  static translateOneFunction(functionDetail, contractName, extendsClassesName, otherClassesName, isLibrary, contractsTranslatedCode, isOverloaded, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, isMainContract: boolean, monitor: Monitor): string {
 
     let output: string = '';
-    let functionModifiers = functionDetail.modifiers;
-    let parametersList = [];
-    let returnParametersList = [];
-    let localVariablesList = [];
-    let changedVariables = [];
-    let variableCounter = { count: 0 };
-    let interfaceContractVariableName = [];
+    const functionModifiers = functionDetail.modifiers;
+    const parametersList = [];
+    const returnParametersList = [];
+    const localVariablesList = [];
+    const changedVariables = [];
+    const variableCounter = { count: 0 };
+    const interfaceContractVariableName = [];
     output = this
       .constructFunctionSignature(
         functionDetail.parameters ? functionDetail.parameters.parameters : [],
@@ -618,16 +614,16 @@ export class TranslatorSubParts {
         isLibrary
       );
     if (!isLibrary) {
-      output += this.translateFunctionParameters(functionDetail.parameters.parameters, parametersList, functionDetail.stateMutability);
+      output += this.translateFunctionParameters(functionDetail.parameters.parameters, parametersList, functionDetail.stateMutability, monitor);
     }
 
     if (functionDetail.returnParameters != null) {
       output += this.translateReturnParameters(functionDetail.returnParameters.parameters, returnParametersList);
     }
-    let hasTranslatedReturn: boolean[] = [false];
+    const hasTranslatedReturn: boolean[] = [false];
     output += this.getStateVariables(contractName, extendsClassesName, variableCounter, stateVariablesList);
     output += this.translateModifiersCode(contractName, functionModifiers, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, true, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary);
-    output += this.translateBody(functionDetail.body, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, hasTranslatedReturn, interfaceContractVariableName, isLibrary);
+    output += this.translateBody(functionDetail.body, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, hasTranslatedReturn, monitor, interfaceContractVariableName, isLibrary);
     output += this.translateModifiersCode(contractName, functionModifiers, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, false, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary);
     if (!hasTranslatedReturn[0]) {
       output += this.returnParameters(returnParametersList, isLibrary);

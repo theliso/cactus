@@ -1,6 +1,8 @@
+/* eslint-disable prettier/prettier */
 import { TranslateExpression } from './TranslateExpression';
 import { TranslatorSubParts } from './TranslatorSubParts';
 import { BasicFunctions } from '../BasicFunctions/BasicFunctions';
+import { Monitor } from '../../common/monitor/Monitor';
 
 export class TranslateStatements {
 
@@ -14,17 +16,19 @@ export class TranslateStatements {
     }
     return output;
   }
-  static getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList): string {
+  static getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, monitor: Monitor): string {
     let output: string = '';
 
     for (let i = 0; i < functionCallsList.length; i++) {
 
       if (!BasicFunctions.isItemExistInList(functionCallsList[i].Name, functionsList) && (functionCallsList[i].Name == 'send' || functionCallsList[i].Name == 'transfer')) {
-        output += '\nlet result' + variableCounter.count + ' = await Balance.send(ctx, ctx.clientIdentity.getID(),' + functionCallsList[i].PreFunction + ',' + this.getCommasSeparatedListString(functionCallsList[i].Parameters) + `);\n`;
+        monitor.setBalanceClass(true);
+        output += '\nlet result' + variableCounter.count + ' = await Balance.send(ctx, await ctx.clientIdentity.getID(),' + functionCallsList[i].PreFunction + ',' + this.getCommasSeparatedListString(functionCallsList[i].Parameters) + `);\n`;
         functionCallsList[i].replaceVariable = variableCounter.count++;
         return output;
       }
       if (!BasicFunctions.isItemExistInList(functionCallsList[i].Name, functionsList) && functionCallsList[i].Name == 'balance') {
+        monitor.setBalanceClass(true);
         output += '\nlet result' + variableCounter.count + ' = await Balance.' + functionCallsList[i].Name + '(ctx, ctx.clientIdentity.getID());\n';
         functionCallsList[i].replaceVariable = variableCounter.count++;
         return output;
@@ -113,22 +117,22 @@ export class TranslateStatements {
     return output;
   }
 
-  static translateExpressionStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName): string {
+  static translateExpressionStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, monitor: Monitor): string {
 
     let output: string = '';
     let mappingVariablesList = [];
     let functionCallsList = [];
     let expressionStatement = TranslateExpression.translateExpression(statement.expression, mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList, interfaceContractVariableName);
-    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList);
+    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, monitor);
     let mappingStatements = this.getMappingUndefined(contractName, mappingVariablesList, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList);
     mappingStatements = this.replaceWithFunctionResult(mappingStatements, functionCallsList, functionsList);
     expressionStatement = this.replaceWithFunctionResult(expressionStatement, functionCallsList, functionsList);
     functionCallsStatements = this.replaceWithFunctionResult(functionCallsStatements, functionCallsList, functionsList);
-    output = functionCallsStatements + mappingStatements + expressionStatement + ';';
-    return output === ';' ? '' : output;
+    output = functionCallsStatements + "\n" + mappingStatements + "\n" + expressionStatement;
+    return output;
   }
 
-  static translateReturnStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary): string {
+  static translateReturnStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary, monitor: Monitor): string {
 
     let output: string = '';
 
@@ -142,7 +146,7 @@ export class TranslateStatements {
       let functionCallsList = [];
 
       let expressionStatement = TranslateExpression.translateExpression(statement.expression, mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList, interfaceContractVariableName);
-      let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList);
+      let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, monitor);
       let mappingStatements = this.getMappingUndefined(contractName, mappingVariablesList, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList);
       mappingStatements = this.replaceWithFunctionResult(mappingStatements, functionCallsList, functionsList);
       expressionStatement = this.replaceWithFunctionResult(expressionStatement, functionCallsList, functionsList);
@@ -152,6 +156,7 @@ export class TranslateStatements {
       // This if else must rethought because it must be adjusted with the function returning type
       if (isLibrary) {
         output = functionCallsStatements + mappingStatements + `\n let returnTemp = ` + expressionStatement + `;\n` + storageVariables + saveStateVariables + `\n return returnTemp;\n `;
+        output = output === ';' ? '' : output;
       }
       else {
         output = functionCallsStatements
@@ -165,7 +170,7 @@ export class TranslateStatements {
     return output;
   }
 
-  static translateForStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary, hasTranslatedReturn: boolean[]): string {
+  static translateForStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary, hasTranslatedReturn: boolean[], monitor: Monitor): string {
 
     let output: string = '';
     let mappingVariablesList = [];
@@ -175,7 +180,7 @@ export class TranslateStatements {
     let conditionStatement = TranslateExpression.translateExpression(statement.conditionExpression, mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList, interfaceContractVariableName);
     let loopExpressionStatement = TranslateExpression.translateExpression(statement.loopExpression.expression, mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName);
 
-    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList);
+    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, monitor);
     let mappingStatements = this.getMappingUndefined(contractName, mappingVariablesList, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList);
     mappingStatements = this.replaceWithFunctionResult(mappingStatements, functionCallsList, functionsList);
     conditionStatement = this.replaceWithFunctionResult(conditionStatement, functionCallsList, functionsList);
@@ -187,14 +192,14 @@ export class TranslateStatements {
     return output;
   }
 
-  static translateIfStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, hasTranslatedReturn: boolean[]): string {
+  static translateIfStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, hasTranslatedReturn: boolean[], monitor: Monitor): string {
 
     let output: string = '';
     let mappingVariablesList = [];
     let functionCallsList = [];
 
     let expressionStatement = TranslateExpression.translateExpression(statement.condition, mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList, interfaceContractVariableName);
-    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList);
+    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, monitor);
     let mappingStatements = this.getMappingUndefined(contractName, mappingVariablesList, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList);
 
     mappingStatements = this.replaceWithFunctionResult(mappingStatements, functionCallsList, functionsList);
@@ -202,16 +207,16 @@ export class TranslateStatements {
     functionCallsStatements = this.replaceWithFunctionResult(functionCallsStatements, functionCallsList, functionsList);
 
     localVariablesList.push({ Scope: localVariablesList.length, ListofVariables: [] });
-    output = functionCallsStatements + mappingStatements + `\n if(` + expressionStatement + `)\n{\n` + TranslatorSubParts.translateOneStatement(statement.trueBody, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, hasTranslatedReturn) + `\n}\n`;
+    output = functionCallsStatements + mappingStatements + `\n if(` + expressionStatement + `)\n{\n` + TranslatorSubParts.translateOneStatement(statement.trueBody, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, hasTranslatedReturn, monitor) + `\n}\n`;
     if (statement.falseBody != null) {
-      output += `else {\n` + TranslatorSubParts.translateOneStatement(statement.falseBody, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, hasTranslatedReturn) + `\n}\n`;
+      output += `else {\n` + TranslatorSubParts.translateOneStatement(statement.falseBody, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, hasTranslatedReturn, monitor) + `\n}\n`;
     }
     localVariablesList.pop();
     return output;
 
   }
 
-  static translateEmitStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName): string {
+  static translateEmitStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, monitor: Monitor): string {
 
     let output: string = '';
     let mappingVariablesList = [];
@@ -247,7 +252,7 @@ export class TranslateStatements {
     payload = payload.concat(`let payload${variableCounter.count}: string = JSON.stringify(${payloadVariableObject}); \n`);
     payload = payload.concat(`ctx.stub.setEvent(\'${eventName}\', Buffer.from(payload${variableCounter.count}));\n`);
 
-    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList);
+    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, monitor);
     let mappingStatements = this.getMappingUndefined(contractName, mappingVariablesList, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList);
 
     mappingStatements = this.replaceWithFunctionResult(mappingStatements, functionCallsList, functionsList);
@@ -257,7 +262,7 @@ export class TranslateStatements {
     return output;
   }
 
-  static translateVariableDeclarationStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName): string {
+  static translateVariableDeclarationStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, monitor: Monitor): string {
     let output: string = '';
     let mappingVariablesList = [];
     let functionCallsList = [];
@@ -355,7 +360,7 @@ export class TranslateStatements {
       localVariablesList[localVariablesList.length - 1].ListofVariables.push({ Name: statement.variables[i].name, TypeName: statement.variables[i].typeName, Type: statement.variables[i].storageLocation, InitValue: initValues[i] });
     }
 
-    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList);
+    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, monitor);
     let mappingStatements = this.getMappingUndefined(contractName, mappingVariablesList, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList);
 
     mappingStatements = this.replaceWithFunctionResult(mappingStatements, functionCallsList, functionsList);
@@ -366,14 +371,14 @@ export class TranslateStatements {
     return output;
   }
 
-  static translateWhileStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary): string {
+  static translateWhileStatement(statement, contractName, parametersList, returnParametersList, changedVariables, localVariablesList, variableCounter, extendsClassesName, otherClassesName, contractsTranslatedCode, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName, isLibrary, monitor: Monitor): string {
 
     let output: string = '';
     let mappingVariablesList = [];
     let functionCallsList = [];
 
     let conditionStatement = TranslateExpression.translateExpression(statement.condition, mappingVariablesList, functionCallsList, changedVariables, localVariablesList, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, interfaceContractVariableName);
-    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList);
+    let functionCallsStatements = this.getFunctionCalls(contractName, mappingVariablesList, functionCallsList, changedVariables, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, monitor);
     let mappingStatements = this.getMappingUndefined(contractName, mappingVariablesList, variableCounter, structsList, enumsList, eventsList, modifiersList, functionsList, stateVariablesList, mappingTypeList, librarysList, parametersList);
 
     mappingStatements = this.replaceWithFunctionResult(mappingStatements, functionCallsList, functionsList);

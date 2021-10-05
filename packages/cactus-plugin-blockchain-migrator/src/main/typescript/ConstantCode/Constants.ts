@@ -1,7 +1,6 @@
+/* eslint-disable prettier/prettier */
 
 export class ConstantCode {
-
-   
 
 	static mixinDeclaration: string = 'export type Class = new (...args: any[]) => any;';
 	static header = (isMainContract: boolean): string =>
@@ -21,10 +20,8 @@ export class ConstantCode {
 		return 'import { Context } from \'fabric-contract-api\';\n\n'
 		.concat('export class Balance {\n')
 		.concat('\tstatic async send(ctx: Context, addressFrom: string, addressTo: string, amount: number): Promise<void> {\n')
-		.concat('\t\tlet senderBalance = await ctx.stub.getState(addressFrom);\n')
-		.concat('\t\tlet receiverBalance = await ctx.stub.getState(addressTo);\n')
-		.concat('\t\tlet senderBalanceVal = parseFloat(senderBalance);\n')
-		.concat('\t\tlet receiverBalanceVal = parseFloat(receiverBalance);\n')
+		.concat('\t\tlet senderBalanceVal = parseFloat(await ctx.stub.invokeChaincode("balance", ["getBalance", addressFrom], "mychannel"));\n')
+		.concat('\t\tlet receiverBalanceVal = parseFloat(await ctx.stub.invokeChaincode("balance", ["getBalance", addressTo], "mychannel"));\n')
 		.concat('\t\tif (senderBalanceVal > amount) {\n')
 		.concat('\t\t\tsenderBalanceVal -= amount;\n')
 		.concat('\t\t\treceiverBalanceVal += amount;\n')

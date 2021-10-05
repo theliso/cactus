@@ -1,5 +1,3 @@
-/* eslint-disable prettier/prettier */
-/* eslint-disable prefer-const */
 import { OspreyApplication } from "./OspreyApplication";
 import { OspreyConfiguration } from "./common/config/OspreyConfiguration";
 
@@ -11,10 +9,10 @@ import { OspreyConfiguration } from "./common/config/OspreyConfiguration";
   );
 } */
 const ospreyConfig: OspreyConfiguration = new OspreyConfiguration({
-  smartContractDir: "/media/luis/Disco\ rigido/Luis/university/Masters/second_year/thesis/smart_contract_migration/solidity_contracts/contracts/simple",
+  smartContractDir: "/media/luis/Disco\ rigido/Luis/university/Masters/second_year/thesis/smart_contract_migration/solidity_contracts/contracts/complex",
   srcLang: "ts",
   blockchain: "fabric",
-  srcFileName: "SimpleStorage.sol",
+  srcFileName: "Marketplace.sol",
 });
 const ospreyClient: OspreyApplication = new OspreyApplication(ospreyConfig);
 ospreyClient.translateSrcContractToFabric();

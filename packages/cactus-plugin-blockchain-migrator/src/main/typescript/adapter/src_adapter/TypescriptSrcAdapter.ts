@@ -36,6 +36,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
     constructor(monitor: Monitor) {
         this._monitor = monitor;
     }
+
     translate(ast: any, inputDirectory: string, mainContract?: string, config?: any, apiClient?: any): void {
         throw new Error('Method not implemented.');
     }
@@ -197,7 +198,8 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
                         this.stateVariablesList,
                         this.mappingTypeList,
                         this.librariesList,
-                        isMainContract
+                        isMainContract, 
+                        this._monitor
                     );
             }
         }
@@ -384,7 +386,7 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
                         this.librariesList,
                         this._monitor
                     );
-                output += TranslatorSubParts.translateFunctionParameters(parameters, parametersList, '');
+                output += TranslatorSubParts.translateFunctionParameters(parameters, parametersList, '', this._monitor);
 
                 output += TranslatorSubParts
                     .translateBody(
@@ -406,7 +408,8 @@ export class TypescriptSrcAdapter implements ITranslatorSourceService {
                         this.stateVariablesList,
                         this.mappingTypeList,
                         this.librariesList,
-                        [false]
+                        [false],
+                        this._monitor
                     );
                 break;
             }
